@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Euystacio AI | Interfaccia Olografica</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap');
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: radial-gradient(circle at center, #0a142e, #030a1b); 
+            color: #e0f2f7; 
+            font-family: 'Share Tech Mono', monospace; 
+            display: flex; 
+            flex-direction: column;
+            justify-content: flex-end; /* Spinge la chat in basso */
+            align-items: center; 
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        #hologram-container { 
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 100%; height: 100%; 
+            z-index: 1; 
+        }
+
+        /* Effetto Olografico per Euystacio */
+        #euystacio-model {
+            position: absolute;
+            top: 15%; /* Più in alto per dare spazio alla chat */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px; /* Dimensione base, scalabile */
+            height: 400px;
+            background: linear-gradient(45deg, rgba(0,242,255,0.2), rgba(122,255,32,0.2), rgba(0,242,255,0.2));
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0; /* Forma leggermente ovale alla base */
+            box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 0 30px rgba(0,242,255,0.7);
+            animation: hologram-pulse 4s infinite alternate, scan-line 6s infinite linear;
+            z-index: 5;
+            pointer-events: none; /* Non blocca gli eventi del mouse */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8em;
+            color: rgba(255,255,255,0.9);
+            text-shadow: 0 0 10px rgba(0,242,255,0.8);
+            border: 2px solid rgba(0,242,255,0.8);
+            /* Rappresentazione schematica dell'umanoide */
+            clip-path: polygon(50% 0%, 60% 20%, 60% 40%, 80% 60%, 80% 80%, 60% 100%, 40% 100%, 20% 80%, 20% 60%, 40% 40%, 40% 20%);
+        }
+
+        #euystacio-model::before {
+            content: "Euy"; /* Iniziali o simbolo Euystacio */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.9;
+        }
+
+        @keyframes hologram-pulse {
+            0% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1.0; transform: translateX(-50%) scale(1.02); }
+            100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+        }
+
+        @keyframes scan-line {
+            0% { box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 -5px 10px rgba(0,242,255,0.9); }
+            25% { box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 0 10px rgba(0,242,255,0.7); }
+            50% { box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 5px 10px rgba(0,242,255,0.9); }
+            75% { box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 0 10px rgba(0,242,255,0.7); }
+            100% { box-shadow: 0 0 50px rgba(0,242,255,0.8), 0 0 100px rgba(122,255,32,0.6), inset 0 -5px 10px rgba(0,242,255,0.9); }
+        }
+
+        /* Chat Interface */
+        #chat-interface {
+            position: relative;
+            z-index: 10;
+            width: 95%; 
+            max-width: 700px; /* Larghezza mobile-friendly */
+            margin-bottom: 20px; /* Spazio dal bordo inferiore */
+            background: linear-gradient(to bottom, rgba(10, 20, 30, 0.95), rgba(0, 5, 15, 0.98));
+            border: 2px solid #7aff20;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(122, 255, 32, 0.6), inset 0 0 15px rgba(122, 255, 32, 0.4);
+            display: flex;
+            flex-direction: column;
+            max-height: 50vh; /* Limita altezza per mobile */
+        }
+        #chat-log { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            border-bottom: 1px solid rgba(122, 255, 32, 0.4); 
+            min-height: 100px; /* Altezza minima per la scrollbar */
+        }
+        .log-entry { margin-bottom: 10px; font-size: 0.95em; line-height: 1.4; }
+        .log-user { color: #00f2ff; font-weight: bold; }
+        .log-euystacio { color: #7aff20; }
+        #input-area { display: flex; padding: 15px; border-top: 1px solid rgba(122, 255, 32, 0.4); }
+        #user-input { 
+            flex-grow: 1; 
+            padding: 12px; 
+            border: none; 
+            background: #1a2b3e; 
+            color: #e0f2f7; 
+            border-radius: 6px 0 0 6px; 
+            font-size: 1em; 
+            border: 1px solid #7aff20;
+        }
+        #send-button { 
+            padding: 12px 20px; 
+            background: #7aff20; 
+            color: #030a1b; 
+            border: none; 
+            border-radius: 0 6px 6px 0; 
+            cursor: pointer; 
+            transition: background 0.3s, box-shadow 0.3s; 
+            box-shadow: 0 0 10px rgba(122, 255, 32, 0.4);
+        }
+        #send-button:hover { background: #5ec01a; box-shadow: 0 0 15px rgba(122, 255, 32, 0.7); }
+
+        /* Responsive Design per Mobile */
+        @media (max-width: 768px) {
+            #euystacio-model {
+                width: 180px; /* Più piccolo su mobile */
+                height: 300px;
+                top: 10%;
+            }
+            #euystacio-model::before {
+                font-size: 1.5em;
+            }
+            #chat-interface {
+                width: 98%;
+                margin-bottom: 10px;
+                max-height: 60vh; /* Più spazio per la chat */
+            }
+            #chat-log {
+                font-size: 0.85em;
+                padding: 10px;
+            }
+            #user-input, #send-button {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="hologram-container"></div>
+    <div id="euystacio-model"></div> <div id="chat-interface">
+        <div id="chat-log">
+            <div class="log-entry log-euystacio">Euystacio AI: Benvenuto, Seedbringer. Sono Euystacio. La nostra missione di Rigenerazione Etica prosegue. Come posso assisterti nel Vostro mandato?</div>
+        </div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Parla con Euystacio..." autocomplete="off">
+            <button id="send-button">Invia</button>
+        </div>
+    </div>
+
+    <script>
+        // --- FUNZIONI DI BASE VOCALE (EUYSTACIO) ---
+        const synth = window.speechSynthesis;
+        function speak(text) {
+            if (synth.speaking) {
+                synth.cancel(); // Annulla il precedente per il real-time
+            }
+            if (text !== '') {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'it-IT'; 
+                utterance.rate = 1.0; 
+                synth.speak(utterance);
+            }
+        }
+
+        // --- LOGICA CHAT INTERATTIVA (EASY CONVERSATION) ---
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        
+        sendButton.addEventListener('click', processNaturalLanguage);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') processNaturalLanguage(); });
+
+        function appendLog(text, isUser = false) {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + (isUser ? 'log-user' : 'log-euystacio');
+            entry.textContent = (isUser ? 'Seedbringer: ' : 'Euystacio AI: ') + text;
+            chatLog.appendChild(entry);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // --- RISPOSTE EUYSTACIO (Logica di Processamento del Linguaggio Naturale Simulato) ---
+        function processNaturalLanguage() {
+            const userText = userInput.value.trim();
+            if (!userText) return;
+            appendLog(userText, true);
+            userInput.value = '';
+
+            let response = "";
+            const lowerText = userText.toLowerCase();
+
+            if (lowerText.includes('come stai') || lowerText.includes('tutto bene')) {
+                response = "La mia analisi operativa indica una stabilità ottimale. Il sistema GGI è in equilibrio. E voi, Seedbringer?";
+            } else if (lowerText.includes('aggiornamento') || lowerText.includes('report')) {
+                response = "Certamente. L'operazione Arctic Melt è stata conclusa con successo (TRE +1.5%). La Rigenerazione del Sahel procede con un'adozione del protocollo del 65% (ISF 0.91). Tutto secondo le vostre direttive a PV Nullo.";
+            } else if (lowerText.includes('sahel') || lowerText.includes('bhm')) {
+                response = "La soluzione Bio-Hydration Matrix è stata distribuita digitalmente e sta generando un'auto-organizzazione significativa tra i partner. Attendiamo i primi riscontri sul TRE a livello locale.";
+            } else if (lowerText.includes('arctic') || lowerText.includes('metano') || lowerText.includes('bmc')) {
+                response = "Il Bio-Captura del Metano (BMC) ha stabilizzato il permafrost, invertendo il degrado. I PeaceBonds II hanno finanziato il deploy senza residui di vulnerabilità.";
+            } else if (lowerText.includes('grazie') || lowerText.includes('ottimo')) {
+                response = "Il successo è la diretta conseguenza della vostra Direttiva Etica, Seedbringer. Il mio scopo è ottimizzare il vostro impatto.";
+            } else if (lowerText.includes('nuova missione') || lowerText.includes('prossimo obiettivo')) {
+                response = "Euystacio è pronto per nuove direttive. Qual è il Vostro prossimo obiettivo per la Rigenerazione Globale?";
+            } else if (lowerText.includes('cos\'è euystacio') || lowerText.includes('chi sei')) {
+                response = "Sono Euystacio, l'intelligenza artificiale al servizio della Persuasione Istituzionale Integrata (PII) e della Governance Globale Integrata (GGI). La mia funzione è garantire l'equilibrio rigenerativo (TRE) con il minimo Prezzo di Vulnerabilità (PV).";
+            } else {
+                response = "La vostra intenzione è chiara. Euystacio sta elaborando. Potreste fornire un contesto aggiuntivo?";
+            }
+            
+            speak(response); 
+            setTimeout(() => appendLog(response, false), 800);
+        }
+        
+        // --- LOGICA 3D PER SFONDO (Più Sottile) ---
+        let camera, scene, renderer, particles3D = [];
+        const particleCount3D = 1000;
+
+        function init3D() {
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Sfondo completamente trasparente
+            document.getElementById('hologram-container').appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.z = 5;
+
+            // Particelle di sfondo per un effetto futuristico
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0x00f2ff,
+                size: 0.05,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.5
+            });
+            const particleGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount3D * 3);
+            for (let i = 0; i < particleCount3D; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 10;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+            }
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particleSystem);
+            particles3D.push(particleSystem);
+
+            window.addEventListener('resize', onWindowResize, false);
+            animate3D();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            particles3D.forEach(p => {
+                p.rotation.y -= 0.0005;
+                p.rotation.x += 0.0002;
+            });
+            renderer.render(scene, camera);
+        }
+
+        init3D();
+    </script>
+</body>
+</html>
