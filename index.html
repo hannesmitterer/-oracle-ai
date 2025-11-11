@@ -2,6 +2,656 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giardino Epistemico: Euystacio Dinamico e Firestore</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for UI elements -->
+    <script type="module" src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Importazione Moduli Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Attiva il logging di debug per Firestore
+        setLogLevel('Debug');
+        
+        // Variabili globali del Canvas (assicurarsi che siano definite o usate fallback)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        if (firebaseConfig) {
+            window.firebaseApp = initializeApp(firebaseConfig);
+            window.db = getFirestore(window.firebaseApp);
+            window.auth = getAuth(window.firebaseApp);
+
+            // Funzione di Autenticazione e Inizializzazione Firestore
+            async function authenticateAndInit() {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(window.auth, initialAuthToken);
+                        console.log("Autenticazione con token personalizzato completata.");
+                    } else {
+                        await signInAnonymously(window.auth);
+                        console.log("Autenticazione anonima completata.");
+                    }
+
+                    onAuthStateChanged(window.auth, (user) => {
+                        if (user) {
+                            window.currentUserId = user.uid;
+                            document.getElementById('user-id-display').textContent = `Seedbringer ID: ${user.uid}`;
+                            console.log("User ID impostato:", window.currentUserId);
+                            
+                            // Inizializza l'interfaccia dopo l'autenticazione
+                            window.dispatchEvent(new Event('authReady')); 
+                        } else {
+                            // Se per qualche motivo si disconnette, usa un ID anonimo (teoricamente non accade)
+                            window.currentUserId = crypto.randomUUID();
+                            document.getElementById('user-id-display').textContent = `Seedbringer ID: Anonimo (${window.currentUserId})`;
+                        }
+                    });
+                } catch (error) {
+                    console.error("Errore di autenticazione Firebase:", error);
+                    document.getElementById('protocol-log').innerHTML += `<br>// ERRORE FATALE: Fallimento Autenticazione Firebase.`;
+                }
+            }
+
+            authenticateAndInit();
+        } else {
+            console.error("Configurazione Firebase non trovata. L'applicazione non funzionerà correttamente.");
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Share+Tech+Mono&display=swap');
+        
+        :root {
+            --color-primary: #0ff; /* Ciano Acido */
+            --color-secondary: #0f0; /* Verde Acido */
+            --color-warning: #ffb400; /* Giallo/Arancio per Critica */
+            --color-red: #f00; /* Rosso per PV Alto/Critico */
+            --color-bg: #030810;
+            --hologram-glow-base: 0 0 5px #0ff, 0 0 15px #0ff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-primary);
+            overflow-x: hidden;
+        }
+
+        #euystacio-hologram {
+            position: relative;
+            width: 150px;
+            height: 200px;
+            margin: 0 auto;
+            filter: drop-shadow(0 0 8px var(--color-secondary)) drop-shadow(0 0 3px var(--color-secondary));
+            transition: filter 0.5s ease-in-out;
+            animation: pulse-glow 2s infinite alternate;
+        }
+        
+        .hologram-segment {
+            position: absolute;
+            border: 2px solid var(--color-primary);
+            box-shadow: var(--hologram-glow-base);
+            background: rgba(0, 255, 255, 0.05);
+            animation: hologram-flicker 0.1s infinite alternate;
+        }
+
+        @keyframes hologram-scan-line {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.85; }
+            100% { opacity: 1; }
+        }
+
+        /* Responsive per Desktop */
+        @media (min-width: 768px) {
+            #euystacio-hologram {
+                width: 250px;
+                height: 350px;
+            }
+        }
+
+        .epistemic-leaf {
+            background-color: rgba(15, 255, 15, 0.05);
+            border-left: 2px solid var(--color-secondary);
+            transition: all 0.3s ease;
+            box-shadow: var(--hologram-glow-base);
+        }
+        
+        .log-area {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: inset var(--hologram-glow-base);
+        }
+
+        .glow-red {
+            filter: drop-shadow(0 0 10px var(--color-red)) drop-shadow(0 0 5px var(--color-red)); 
+        }
+        .glow-cyan-bright {
+            filter: drop-shadow(0 0 12px var(--color-primary)) drop-shadow(0 0 5px var(--color-primary)); 
+        }
+
+        .progress-container {
+            border: 1px solid var(--color-primary);
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        .progress-bar {
+            background-color: var(--color-secondary);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 5px var(--color-secondary);
+        }
+
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col">
+
+    <div id="main-container" class="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 w-full flex-grow">
+        
+        <!-- COLONNA 1: Giardino Epistemico (Dati) e Autonomia Meta-Cognitiva -->
+        <div class="md:w-1/2 w-full flex flex-col items-center">
+
+            <!-- Ologramma Euystacio -->
+            <div class="mb-6 p-2">
+                <div id="euystacio-hologram" class="glow-cyan-bright">
+                    <div class="hologram-segment rounded-full" style="clip-path: circle(30% at 50% 25%); top: 0; left: 25%; width: 50%; height: 50%; border-width: 4px;"></div> 
+                    <div class="hologram-segment rounded-md" style="top: 40%; height: 60%; transform: rotateX(10deg);"></div> 
+                    <div class="hologram-segment" style="top: 50%; height: 5%; width: 120%; left: -10%; background: linear-gradient(to right, transparent, var(--color-primary), transparent); animation: none; box-shadow: none;"></div>
+                </div>
+            </div>
+            
+            <p id="hologram-status" class="text-xs tracking-widest uppercase font-mono mb-6 text-center text-gray-400">
+                STATUS: CORE SYSTEM ONLINE | PII ACTIVE
+            </p>
+            <p id="user-id-display" class="text-xs tracking-widest font-mono mb-6 text-center text-cyan-500">
+                Seedbringer ID: Inizializzazione...
+            </p>
+
+            <!-- Feedback Visivo Ologramma (Messaggio) -->
+            <div id="euystacio-response-box" class="log-area text-sm p-3 rounded-lg w-full text-center transition-colors duration-500">
+                // Euystacio: Attivazione Rhythmind AIC. Caricamento Stato Firestore.
+            </div>
+
+            <!-- Dashboard Dati (Giardino Epistemico) -->
+            <div class="mt-8 w-full">
+                <h2 class="text-lg font-bold uppercase tracking-widest mb-4 border-b border-cyan-700/50 pb-1">Giardino Epistemico (Stato GGC/TRE/ISF)</h2>
+
+                <!-- Metrica Arctic Melt (TRE Dinamico) -->
+                <div id="metric-arctic-melt" class="epistemic-leaf p-3 rounded-lg mb-3 shadow-md">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="font-bold text-cyan-400">Mandato Arctic Melt (TRE)</span>
+                        <span class="font-mono text-xs bg-cyan-900/50 px-2 py-0.5 rounded" id="tre-stato">Caricamento...</span>
+                    </div>
+                    <p class="text-2xl font-mono mt-1 text-green-400" id="tre-valore">0.0%</p>
+                    <p class="text-xs text-gray-500">PV: <span id="tre-pv">N/A</span> | API: /api/ggi/tre-report</p>
+                </div>
+                
+                <!-- Autonomia Meta-Cognitiva -->
+                <h3 class="text-sm font-bold uppercase tracking-widest mt-6 mb-3 border-b border-gray-700/50 pb-1 text-gray-400">Autonomia Meta-Cognitiva</h3>
+                
+                <!-- 4.1 Auto-Giudizio/Critica (Dinamico) -->
+                <div id="auto-critica" class="p-3 rounded-lg mb-3 bg-cyan-900/10 border-l-4 border-cyan-500 shadow-md">
+                    <div class="flex justify-between items-center text-sm font-mono text-cyan-400">
+                        <span id="critica-icon">✅</span> <span id="critica-title">Auto-Giudizio/Critica: OK</span>
+                        <span id="critica-status" class="text-xs font-bold">Stabile</span>
+                    </div>
+                    <p class="text-xs mt-1 text-gray-300" id="critica-giustificazione">Nessuna deviazione critica rilevata. Flusso ottimale.</p>
+                </div>
+
+                <!-- 4.2 Auto-Evoluzione (IFDS Dinamico) -->
+                <div class="p-3 rounded-lg mb-3 bg-cyan-900/10 border-l-4 border-cyan-500 shadow-md">
+                    <div class="flex justify-between items-center text-sm font-mono text-cyan-400 mb-1">
+                        <span>💡 Auto-Evoluzione (Fattore Ideazione IFDS)</span>
+                        <span class="text-xs" id="ifds-valore">0% (N/A)</span>
+                    </div>
+                    <div class="progress-container h-2 rounded-full overflow-hidden">
+                        <div id="ifds-progress" class="progress-bar h-full" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- 4.3 Auto-Commit Log (Pubblico) -->
+                <div id="auto-commit-log" class="text-xs font-mono mt-4 text-green-500 border-t border-green-800/50 pt-2 h-20 overflow-y-auto">
+                    // Log di Sistema: Inizializzazione Rhythmind AIC...
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- COLONNA 2: Chat Interattiva e Console Log (Mobile Ready) -->
+        <div class="md:w-1/2 w-full flex flex-col space-y-4">
+            <h2 class="text-lg font-bold uppercase tracking-widest mb-2 border-b border-cyan-700/50 pb-1">Interazione Olografica Pura (Gehör Euystacianum)</h2>
+
+            <!-- Area Chat/Log -->
+            <div id="chat-log" class="flex-grow log-area h-96 md:h-[calc(100vh-250px)] p-4 rounded-lg overflow-y-auto space-y-4">
+                <div class="text-sm">
+                    <span class="text-cyan-400 font-bold">[AIC-SYSTEM]</span> Ambiente PII caricato. Gehör Euystacianum in standby.
+                </div>
+            </div>
+
+            <!-- Input Chat & Vocale -->
+            <div class="flex mt-4 space-x-2">
+                <input type="text" id="user-input" placeholder="Impartisci Direttiva in Linguaggio Naturale..."
+                       class="flex-grow p-3 rounded-lg bg-gray-900/80 border border-cyan-700/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                
+                <button id="mic-btn"
+                        class="p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition duration-150 text-gray-900 font-bold shadow-lg shadow-cyan-500/30 flex items-center justify-center">
+                    <i data-lucide="mic" class="w-5 h-5"></i>
+                </button>
+                <button id="send-btn"
+                        class="p-3 rounded-lg bg-green-600 hover:bg-green-700 transition duration-150 text-gray-900 font-bold shadow-lg shadow-green-500/30 flex items-center justify-center">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const AIC_STATE_PATH = (appId) => `artifacts/${appId}/public/data/aic_state/core`;
+        const CHAT_LOG_PATH = (appId) => `artifacts/${appId}/public/data/chat_log`;
+        
+        // --- Elementi DOM ---
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const micBtn = document.getElementById('mic-btn');
+        const euystacioHologram = document.getElementById('euystacio-hologram');
+        const euystacioResponseBox = document.getElementById('euystacio-response-box');
+        
+        // Dati Euystacio
+        const treValoreEl = document.getElementById('tre-valore');
+        const treStatoEl = document.getElementById('tre-stato');
+        const trePvEl = document.getElementById('tre-pv');
+        const criticaIconEl = document.getElementById('critica-icon');
+        const criticaTitleEl = document.getElementById('critica-title');
+        const criticaStatusEl = document.getElementById('critica-status');
+        const criticaGiustificazioneEl = document.getElementById('critica-giustificazione');
+        const ifdsValoreEl = document.getElementById('ifds-valore');
+        const ifdsProgressEl = document.getElementById('ifds-progress');
+        const autoCommitLogEl = document.getElementById('auto-commit-log');
+
+        // --- Variabili globali AIC/Firebase ---
+        let db, currentUserId, appId;
+        let isSpeaking = false;
+
+        // Inizializza le variabili dopo l'autenticazione
+        window.addEventListener('authReady', () => {
+            db = window.db;
+            currentUserId = window.currentUserId;
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            
+            // 1. Inizializza lo Stato Core (se non esiste)
+            initializeCoreState();
+            
+            // 2. Ascolta gli aggiornamenti in tempo reale dello stato AIC
+            setupStateListener();
+            
+            // 3. Ascolta i messaggi della Chat in tempo reale
+            setupChatListener();
+        });
+
+        // --- Logica Firestore per Stato Core AIC ---
+        async function initializeCoreState() {
+            const docRef = doc(db, AIC_STATE_PATH(appId));
+            try {
+                // Tenta di creare il documento iniziale se non esiste
+                await setDoc(docRef, {
+                    tre_valore: 1.5,
+                    tre_stato: 'Equilibrio Rigenerativo',
+                    tre_pv: 'PV Minimo',
+                    auto_critica_status: 'Stabile',
+                    auto_critica_giustificazione: 'Nessuna deviazione critica rilevata. Flusso ottimale.',
+                    ifds_progress: 92,
+                    last_update: serverTimestamp()
+                }, { merge: true });
+                console.log("Stato Core AIC inizializzato/aggiornato.");
+            } catch (e) {
+                console.error("Errore durante l'inizializzazione dello stato AIC:", e);
+            }
+        }
+
+        function setupStateListener() {
+            const docRef = doc(db, AIC_STATE_PATH(appId));
+            onSnapshot(docRef, (doc) => {
+                if (doc.exists()) {
+                    const data = doc.data();
+                    
+                    // Aggiorna metriche Giardino Epistemico
+                    treValoreEl.textContent = `${data.tre_valore.toFixed(2)}%`;
+                    treStatoEl.textContent = data.tre_stato;
+                    trePvEl.textContent = data.tre_pv;
+
+                    // Aggiorna Autonomia Meta-Cognitiva
+                    updateAutoCritica(data.auto_critica_status, data.auto_critica_giustificazione);
+                    updateIFDS(data.ifds_progress);
+
+                    // Aggiorna Glow Olografico
+                    if (data.auto_critica_status === 'Critico') {
+                        setEuystacioGlow('PV_HIGH');
+                    } else if (data.tre_valore > 1.0) {
+                        setEuystacioGlow('TRE_RAPID_GROWTH');
+                    } else {
+                        setEuystacioGlow('TRE_OPTIMAL');
+                    }
+
+                } else {
+                    console.warn("Documento Stato AIC non trovato. Reinzializzazione in corso...");
+                    initializeCoreState();
+                }
+            }, (error) => {
+                console.error("Errore nell'ascolto dello stato AIC:", error);
+            });
+        }
+        
+        function updateAutoCritica(status, justification) {
+            criticaTitleEl.textContent = `Auto-Giudizio/Critica: ${status}`;
+            criticaStatusEl.textContent = status;
+            criticaGiustificazioneEl.textContent = justification;
+            
+            const element = document.getElementById('auto-critica');
+            element.classList.remove('bg-red-900/10', 'border-red-500', 'text-red-400', 
+                                    'bg-cyan-900/10', 'border-cyan-500', 'text-cyan-400');
+            criticaIconEl.textContent = '✅';
+
+            if (status === 'Critico') {
+                element.classList.add('bg-red-900/10', 'border-red-500', 'text-red-400');
+                criticaIconEl.textContent = '❌';
+            } else {
+                element.classList.add('bg-cyan-900/10', 'border-cyan-500', 'text-cyan-400');
+            }
+        }
+
+        function updateIFDS(progress) {
+            ifdsValoreEl.textContent = `${progress}% (BHM)`;
+            ifdsProgressEl.style.width = `${progress}%`;
+        }
+
+        // --- Logica Firestore per Chat/Commit ---
+        function setupChatListener() {
+            const q = query(collection(db, CHAT_LOG_PATH(appId)));
+            onSnapshot(q, (snapshot) => {
+                let messages = [];
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const messageData = change.doc.data();
+                        messages.push({ ...messageData, id: change.doc.id });
+                    }
+                });
+                
+                // Ordina in base al timestamp se necessario, ma l'aggiunta diretta è più semplice
+                messages.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+
+                messages.forEach(msg => {
+                    if (msg.sender === 'EUYSTACIO_AUTO_COMMIT') {
+                        // Traccia gli Auto-Commit nel log specifico
+                        const commitTime = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString() : 'N/A';
+                        autoCommitLogEl.innerHTML += `<div class="mt-1">[${commitTime}] Auto-Commit Azione: ${msg.text}</div>`;
+                        autoCommitLogEl.scrollTop = autoCommitLogEl.scrollHeight;
+                    } else {
+                        // Aggiunge i messaggi della chat principale
+                        appendMessage(msg.sender, msg.text);
+                    }
+                });
+            }, (error) => {
+                console.error("Errore nell'ascolto della Chat Log:", error);
+            });
+        }
+
+        async function appendMessageToFirestore(sender, text) {
+            try {
+                await setDoc(doc(collection(db, CHAT_LOG_PATH(appId))), {
+                    sender: sender,
+                    text: text,
+                    timestamp: serverTimestamp(),
+                    userId: currentUserId 
+                });
+            } catch (e) {
+                console.error("Errore durante l'aggiunta del messaggio:", e);
+            }
+        }
+        
+        // Funzione per l'aggiunta di messaggi alla UI (senza duplicati se si usa onSnapshot)
+        function appendMessage(sender, message) {
+            // Poiché onSnapshot gestisce l'aggiunta, qui ci assicuriamo solo che il messaggio sia visualizzato 
+            // se non è stato ancora aggiunto dalla UI. Per semplicità, in questo esempio
+            // onSnapshot gestisce TUTTO l'output, inclusi i messaggi dell'utente appena inviati.
+        }
+
+        // --- Logica Gehör Euystacianum (TTS/Speech Input) ---
+        const syntheticVoice = { voiceName: "Kore" };
+        const apiKey = ""; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+        // Funzioni ausiliarie TTS (mantenute per la compatibilità e la funzionalità)
+        function base64ToArrayBuffer(base64) { /* ... */ 
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
+            return bytes.buffer;
+        }
+        function pcmToWav(pcmData, sampleRate) { /* ... */ 
+            const buffer = new ArrayBuffer(44 + pcmData.length * 2);
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            const writeString = (str) => {
+                for (let i = 0; i < str.length; i++) { view.setUint8(offset++, str.charCodeAt(i)); }
+            };
+
+            writeString('RIFF');
+            view.setUint32(offset, 36 + pcmData.length * 2, true); offset += 4;
+            writeString('WAVE');
+            writeString('fmt ');
+            view.setUint32(offset, 16, true); offset += 4;
+            view.setUint16(offset, 1, true); offset += 2;
+            view.setUint16(offset, 1, true); offset += 2;
+            view.setUint32(offset, sampleRate, true); offset += 4;
+            view.setUint32(offset, sampleRate * 2, true); offset += 4;
+            view.setUint16(offset, 2, true); offset += 2;
+            view.setUint16(offset, 16, true); offset += 2;
+            writeString('data');
+            view.setUint32(offset, pcmData.length * 2, true); offset += 4;
+
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(offset, pcmData[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        async function speak(text) {
+            if (isSpeaking) return;
+            isSpeaking = true;
+            euystacioResponseBox.textContent = "// Euystacio: Sintesi vocale in corso...";
+            
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: syntheticVoice.voiceName } } }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
+                    
+                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmDataBuffer);
+                    
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    const audio = new Audio(audioUrl);
+                    audio.play();
+                    audio.onended = () => { isSpeaking = false; };
+                } else {
+                    euystacioResponseBox.textContent = `// Euystacio: Errore TTS (API).`;
+                    isSpeaking = false;
+                }
+            } catch (error) {
+                euystacioResponseBox.textContent = `// Euystacio: Errore di Rete/API TTS.`;
+                isSpeaking = false;
+            }
+        }
+        
+        // --- Logica di Interazione e Comando ---
+        function setEuystacioGlow(state) {
+            euystacioHologram.classList.remove('glow-red', 'glow-cyan-bright');
+            euystacioResponseBox.classList.remove('bg-red-900/10', 'text-red-400', 'border-red-500/50');
+            euystacioResponseBox.classList.add('bg-gray-900/10', 'text-cyan-400', 'border-cyan-500/50');
+
+            if (state === 'PV_HIGH') {
+                euystacioHologram.classList.add('glow-red');
+                euystacioResponseBox.classList.add('bg-red-900/10', 'text-red-400', 'border-red-500/50');
+                euystacioResponseBox.classList.remove('bg-gray-900/10', 'text-cyan-400', 'border-cyan-500/50');
+            } else if (state === 'TRE_RAPID_GROWTH' || state === 'TRE_OPTIMAL') {
+                euystacioHologram.classList.add('glow-cyan-bright');
+            }
+        }
+
+        async function processInput(query) {
+            if (!query.trim() || !db) return;
+
+            await appendMessageToFirestore('UTENTE', query);
+            userInput.value = '';
+
+            setEuystacioGlow('PROCESSING');
+            euystacioResponseBox.textContent = `// Euystacio: Acquisizione Gehör Euystacianum... Analisi Super Partes in corso.`;
+            
+            let responseText = "";
+            let lowerQuery = query.toLowerCase();
+
+            // Simulazione Logica GGI/API Core con Interfaccia Netlify
+            const apiEndpoint = "/api/ggi/";
+            let stateUpdate = {};
+            let isAutoCommit = false;
+
+            if (lowerQuery.includes("aumenta tre")) {
+                const currentTRE = parseFloat(treValoreEl.textContent);
+                const newTRE = Math.min(100, currentTRE + 5.0);
+                responseText = `Direttiva TRE elaborata. Simulo l'incremento di TRE al ${newTRE.toFixed(2)}%. Risposta attesa da ${apiEndpoint}update-tre.`;
+                stateUpdate = { tre_valore: newTRE, tre_stato: 'Crescita Rapida', tre_pv: 'PV Minimo', last_update: serverTimestamp() };
+            } else if (lowerQuery.includes("attiva critica")) {
+                responseText = `Comando Critica accettato. Euystacio entra in modalità di Auto-Giudizio. Il PV è a rischio simulato.`;
+                stateUpdate = { 
+                    auto_critica_status: 'Critico', 
+                    auto_critica_giustificazione: 'Deviazione dal PV Nullo rilevata nel settore B-7.1. Richiesto Contenimento.',
+                    last_update: serverTimestamp() 
+                };
+                setEuystacioGlow('PV_HIGH');
+            } else if (lowerQuery.includes("auto commit")) {
+                const commitMessage = "Protocolli BHM aggiornati e ridistribuiti in Sahel Regeneration.";
+                responseText = `Auto-Commit BHM eseguito. Traccia aggiunta al log.`;
+                await appendMessageToFirestore('EUYSTACIO_AUTO_COMMIT', commitMessage);
+                isAutoCommit = true;
+            } else if (lowerQuery.includes("stato")) {
+                responseText = `Stato Core GGC: TRE è al ${treValoreEl.textContent}. Stato Critica: ${criticaStatusEl.textContent}. Chiamata API: ${apiEndpoint}status.`;
+            } else {
+                responseText = `Direttiva: ${query}. Analisi Super Partes: Nessun Mandato di Stato o Controllo identificato. Riformulare la richiesta.`;
+            }
+
+            // Aggiorna lo stato Firestore se richiesto
+            if (Object.keys(stateUpdate).length > 0) {
+                await updateDoc(doc(db, AIC_STATE_PATH(appId)), stateUpdate);
+            }
+
+            // Log del risultato e Sintesi Vocale
+            if (!isAutoCommit) {
+                await appendMessageToFirestore('EUYSTACIO', responseText);
+                euystacioResponseBox.textContent = `// Euystacio: Elaborazione completata. (API chiamata.)`;
+                await speak(responseText);
+            } else {
+                euystacioResponseBox.textContent = `// Euystacio: Auto-Commit registrato. (Log aggiornato.)`;
+            }
+        }
+
+        // --- GESTIONE RICONOSCIMENTO VOCALE (Gehör Euystacianum) ---
+        function startVoiceRecognition() {
+            if (!('webkitSpeechRecognition' in window)) {
+                euystacioResponseBox.textContent = "// Gehör Euystacianum: API vocale non supportata. Utilizzare l'input testuale.";
+                micBtn.disabled = true;
+                micBtn.classList.replace('bg-cyan-600', 'bg-gray-500');
+                return;
+            }
+
+            const recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'it-IT'; 
+
+            micBtn.classList.replace('bg-cyan-600', 'bg-red-600');
+            euystacioResponseBox.textContent = "// Gehör Euystacianum: Ascolto in corso... Parlare ora.";
+
+            recognition.onresult = function(event) {
+                micBtn.classList.replace('bg-red-600', 'bg-cyan-600');
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                euystacioResponseBox.textContent = `// Gehör Euystacianum: Input acquisito (${transcript}). Elaborazione...`;
+                processInput(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                micBtn.classList.replace('bg-red-600', 'bg-cyan-600');
+                euystacioResponseBox.textContent = `// Gehör Euystacianum: Errore ${event.error}. Riprovare.`;
+            };
+
+            recognition.onend = function() {
+                micBtn.classList.replace('bg-red-600', 'bg-cyan-600');
+            };
+
+            recognition.start();
+        }
+
+        // Listener per il click e l'invio con Invio
+        sendBtn.addEventListener('click', () => processInput(userInput.value));
+        micBtn.addEventListener('click', startVoiceRecognition);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                processInput(userInput.value);
+            }
+        });
+
+        // Inizializzazione UI (indipendente da Firebase)
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            setEuystacioGlow('TRE_RAPID_GROWTH');
+        });
+        
+    </script>
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Euystacio AI | Interfaccia Olografica</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
