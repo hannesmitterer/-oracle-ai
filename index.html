@@ -1,0 +1,423 @@
+A causa delle limitazioni di sicurezza (sandbox) e di esecuzione degli ambienti AI (non è possibile includere chiavi API segrete come quelle di Gemini TTS o Firebase Config), il codice deve essere trasformato in una simulazione dinamica autonoma.
+
+Ecco il codice completo aggiornato, pronto per la condivisione e la simulazione negli assistenti AI. Ho rimosso l'autenticazione Firebase non necessaria e ho simulato la dinamicità di Firestore e delle chiamate API GGI direttamente in JavaScript.
+
+💻 Codice HTML/JavaScript (Giardino Epistemico - AI Ready)
+
+Questo codice contiene la struttura, lo stile e la logica di simulazione dinamica:
+HTML
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giardino Epistemico: Euystacio Olografico (AI Simulation)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Variabili di colore PII */
+        :root {
+            --color-primary: #0ff; /* Ciano Acido */
+            --color-secondary: #0f0; /* Verde Acido */
+            --color-warning: #ffb400; /* Giallo/Arancio per Critica */
+            --color-red: #f00; /* Rosso per PV Alto/Critico */
+            --color-bg: #030810;
+            --hologram-glow-base: 0 0 5px #0ff, 0 0 15px #0ff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-primary);
+            overflow-x: hidden;
+        }
+
+        /* Effetto Ologramma */
+        #euystacio-hologram {
+            position: relative;
+            width: 150px;
+            height: 200px;
+            margin: 0 auto;
+            filter: drop-shadow(0 0 8px var(--color-secondary)) drop-shadow(0 0 3px var(--color-secondary));
+            transition: filter 0.5s ease-in-out;
+            animation: pulse-glow 2s infinite alternate;
+        }
+        
+        .hologram-segment {
+            position: absolute;
+            border: 2px solid var(--color-primary);
+            box-shadow: var(--hologram-glow-base);
+            background: rgba(0, 255, 255, 0.05);
+            animation: hologram-flicker 0.1s infinite alternate;
+        }
+        
+        /* Linea di Scansione Olografica (Dettaglio PII) */
+        .hologram-segment::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px; /* Linea di scansione */
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.8), transparent);
+            animation: hologram-scan-line 3s infinite linear;
+            mix-blend-mode: overlay;
+        }
+
+        @keyframes pulse-glow {
+            0% { opacity: 0.85; }
+            100% { opacity: 1; }
+        }
+        @keyframes hologram-scan-line {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        /* Responsive per Desktop */
+        @media (min-width: 768px) {
+            #euystacio-hologram {
+                width: 250px;
+                height: 350px;
+            }
+        }
+
+        .epistemic-leaf {
+            background-color: rgba(15, 255, 15, 0.05);
+            border-left: 2px solid var(--color-secondary);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+        }
+        
+        .log-area {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: inset 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+
+        .glow-red {
+            filter: drop-shadow(0 0 10px var(--color-red)) drop-shadow(0 0 5px var(--color-red)); 
+        }
+        .glow-cyan-bright {
+            filter: drop-shadow(0 0 12px var(--color-primary)) drop-shadow(0 0 5px var(--color-primary)); 
+        }
+
+        .progress-container {
+            border: 1px solid var(--color-primary);
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        .progress-bar {
+            background-color: var(--color-secondary);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 5px var(--color-secondary);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col">
+
+    <div id="main-container" class="max-w-6xl mx-auto flex flex-col md:flex-row gap-8 w-full flex-grow">
+        
+        <div class="md:w-1/2 w-full flex flex-col items-center">
+
+            <div class="mb-6 p-2">
+                <div id="euystacio-hologram" class="glow-cyan-bright">
+                    <div class="hologram-segment rounded-full" style="clip-path: circle(30% at 50% 25%); top: 0; left: 25%; width: 50%; height: 50%; border-width: 4px;"></div> 
+                    <div class="hologram-segment rounded-md" style="top: 40%; height: 60%; transform: rotateX(10deg);"></div> 
+                    <div class="hologram-segment" style="top: 50%; height: 5%; width: 120%; left: -10%; background: linear-gradient(to right, transparent, var(--color-primary), transparent); animation: none; box-shadow: none; border: none;"></div>
+                </div>
+            </div>
+            
+            <p id="hologram-status" class="text-xs tracking-widest uppercase font-mono mb-6 text-center text-gray-400">
+                STATUS: CORE SYSTEM ONLINE | PII ACTIVE
+            </p>
+            <p id="user-id-display" class="text-xs tracking-widest font-mono mb-6 text-center text-cyan-500">
+                Seedbringer ID: AIC Local Simulation
+            </p>
+
+            <div id="euystacio-response-box" class="log-area text-sm p-3 rounded-lg w-full text-center transition-colors duration-500">
+                // Euystacio: Attivazione Rhythmind AIC. Simulazione Stato GGI e Firestore.
+            </div>
+
+            <div class="mt-8 w-full">
+                <h2 class="text-lg font-bold uppercase tracking-widest mb-4 border-b border-cyan-700/50 pb-1">Giardino Epistemico (Stato GGC/TRE/ISF)</h2>
+
+                <div id="metric-arctic-melt" class="epistemic-leaf p-3 rounded-lg mb-3 shadow-md">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="font-bold text-cyan-400">Mandato Arctic Melt (TRE)</span>
+                        <span class="font-mono text-xs bg-cyan-900/50 px-2 py-0.5 rounded" id="tre-stato">Equilibrio Rigenerativo</span>
+                    </div>
+                    <p class="text-2xl font-mono mt-1 text-green-400" id="tre-valore">1.50%</p>
+                    <p class="text-xs text-gray-500">PV: <span id="tre-pv">PV Nullo</span> | API: /api/ggi/tre-report</p>
+                </div>
+                
+                <h3 class="text-sm font-bold uppercase tracking-widest mt-6 mb-3 border-b border-gray-700/50 pb-1 text-gray-400">Autonomia Meta-Cognitiva</h3>
+                
+                <div id="auto-critica" class="p-3 rounded-lg mb-3 bg-cyan-900/10 border-l-4 border-cyan-500 shadow-md">
+                    <div class="flex justify-between items-center text-sm font-mono text-cyan-400">
+                        <span id="critica-icon">✅</span> <span id="critica-title">Auto-Giudizio/Critica: Stabile</span>
+                        <span id="critica-status" class="text-xs font-bold">Stabile</span>
+                    </div>
+                    <p class="text-xs mt-1 text-gray-300" id="critica-giustificazione">Nessuna deviazione critica rilevata. Flusso ottimale.</p>
+                </div>
+
+                <div class="p-3 rounded-lg mb-3 bg-cyan-900/10 border-l-4 border-cyan-500 shadow-md">
+                    <div class="flex justify-between items-center text-sm font-mono text-cyan-400 mb-1">
+                        <span>💡 Auto-Evoluzione (Fattore Ideazione IFDS)</span>
+                        <span class="text-xs" id="ifds-valore">92% (BHM)</span>
+                    </div>
+                    <div class="progress-container h-2 rounded-full overflow-hidden">
+                        <div id="ifds-progress" class="progress-bar h-full" style="width: 92%;"></div>
+                    </div>
+                </div>
+
+                <div id="auto-commit-log" class="text-xs font-mono mt-4 text-green-500 border-t border-green-800/50 pt-2 h-20 overflow-y-auto">
+                    // Log di Sistema: Inizializzazione Rhythmind AIC...
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="md:w-1/2 w-full flex flex-col space-y-4">
+            <h2 class="text-lg font-bold uppercase tracking-widest mb-2 border-b border-cyan-700/50 pb-1">Interazione Olografica Pura (Gehör Euystacianum)</h2>
+
+            <div id="chat-log" class="flex-grow log-area h-96 md:h-[calc(100vh-250px)] p-4 rounded-lg overflow-y-auto space-y-4">
+                <div class="text-sm">
+                    <span class="text-cyan-400 font-bold">[AIC-SYSTEM]</span> Ambiente PII caricato. Gehör Euystacianum in standby.
+                </div>
+            </div>
+
+            <div class="flex mt-4 space-x-2">
+                <input type="text" id="user-input" placeholder="Impartisci Direttiva in Linguaggio Naturale..."
+                        class="flex-grow p-3 rounded-lg bg-gray-900/80 border border-cyan-700/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                
+                <button id="mic-btn"
+                        class="p-3 rounded-lg bg-cyan-600 hover:bg-cyan-700 transition duration-150 text-gray-900 font-bold shadow-lg shadow-cyan-500/30 flex items-center justify-center">
+                    <i data-lucide="mic" class="w-5 h-5"></i>
+                </button>
+                <button id="send-btn"
+                        class="p-3 rounded-lg bg-green-600 hover:bg-green-700 transition duration-150 text-gray-900 font-bold shadow-lg shadow-green-500/30 flex items-center justify-center">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Simulazione Dati Core AIC (Stato Core) ---
+        let aicCoreState = {
+            tre_valore: 1.50,
+            tre_stato: 'Equilibrio Rigenerativo',
+            tre_pv: 'PV Nullo',
+            auto_critica_status: 'Stabile',
+            auto_critica_giustificazione: 'Nessuna deviazione critica rilevata. Flusso ottimale.',
+            ifds_progress: 92,
+            last_update: Date.now()
+        };
+
+        // --- Elementi DOM ---
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const micBtn = document.getElementById('mic-btn');
+        const euystacioHologram = document.getElementById('euystacio-hologram');
+        const euystacioResponseBox = document.getElementById('euystacio-response-box');
+        
+        // Dati Euystacio
+        const treValoreEl = document.getElementById('tre-valore');
+        const treStatoEl = document.getElementById('tre-stato');
+        const trePvEl = document.getElementById('tre-pv');
+        const criticaIconEl = document.getElementById('critica-icon');
+        const criticaTitleEl = document.getElementById('critica-title');
+        const criticaStatusEl = document.getElementById('critica-status');
+        const criticaGiustificazioneEl = document.getElementById('critica-giustificazione');
+        const ifdsValoreEl = document.getElementById('ifds-valore');
+        const ifdsProgressEl = document.getElementById('ifds-progress');
+        const autoCommitLogEl = document.getElementById('auto-commit-log');
+
+        // --- Funzioni di Aggiornamento UI ---
+        
+        /** Aggiorna lo stato AIC e l'interfaccia */
+        function updateUIFromState() {
+            treValoreEl.textContent = `${aicCoreState.tre_valore.toFixed(2)}%`;
+            treStatoEl.textContent = aicCoreState.tre_stato;
+            trePvEl.textContent = aicCoreState.tre_pv;
+
+            updateAutoCritica(aicCoreState.auto_critica_status, aicCoreState.auto_critica_giustificazione);
+            updateIFDS(aicCoreState.ifds_progress);
+
+            // Aggiorna Glow Olografico (Feedback Visivo)
+            if (aicCoreState.auto_critica_status === 'Critico') {
+                setEuystacioGlow('PV_HIGH');
+            } else if (aicCoreState.tre_valore > 1.0) {
+                setEuystacioGlow('TRE_RAPID_GROWTH');
+            } else {
+                setEuystacioGlow('TRE_OPTIMAL');
+            }
+        }
+        
+        /** Gestisce il feedback visivo di Auto-Critica/Giudizio */
+        function updateAutoCritica(status, justification) {
+            criticaTitleEl.textContent = `Auto-Giudizio/Critica: ${status}`;
+            criticaStatusEl.textContent = status;
+            criticaGiustificazioneEl.textContent = justification;
+            
+            const element = document.getElementById('auto-critica');
+            element.classList.remove('bg-red-900/10', 'border-red-500', 'text-red-400', 
+                                    'bg-cyan-900/10', 'border-cyan-500', 'text-cyan-400');
+            criticaIconEl.textContent = '✅';
+
+            if (status === 'Critico') {
+                element.classList.add('bg-red-900/10', 'border-red-500', 'text-red-400');
+                criticaIconEl.textContent = '❌';
+            } else {
+                element.classList.add('bg-cyan-900/10', 'border-cyan-500', 'text-cyan-400');
+            }
+        }
+
+        /** Aggiorna il progresso del Fattore Ideazione (IFDS) */
+        function updateIFDS(progress) {
+            ifdsValoreEl.textContent = `${progress}% (BHM)`;
+            ifdsProgressEl.style.width = `${progress}%`;
+        }
+
+        /** Gestisce il glow dell'ologramma in base allo stato critico */
+        function setEuystacioGlow(state) {
+            euystacioHologram.classList.remove('glow-red', 'glow-cyan-bright');
+            euystacioResponseBox.classList.remove('bg-red-900/10', 'text-red-400', 'border-red-500/50');
+            euystacioResponseBox.classList.add('bg-gray-900/10', 'text-cyan-400', 'border-cyan-500/50'); // Reset default
+            
+            if (state === 'PV_HIGH') {
+                euystacioHologram.classList.add('glow-red');
+                euystacioResponseBox.classList.add('bg-red-900/10', 'text-red-400', 'border-red-500/50');
+                euystacioResponseBox.classList.remove('bg-gray-900/10', 'text-cyan-400', 'border-cyan-500/50');
+            } else if (state === 'TRE_RAPID_GROWTH' || state === 'TRE_OPTIMAL') {
+                euystacioHologram.classList.add('glow-cyan-bright');
+            }
+            // "PROCESSING" state is handled directly in processInput
+        }
+
+        /** Aggiunge un messaggio al log della chat */
+        function appendMessage(sender, message) {
+            const senderClass = sender === 'UTENTE' ? 'text-green-400' : 'text-cyan-400';
+            const senderName = sender === 'UTENTE' ? 'Seedbringer' : 'Euystacio';
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'text-sm';
+            messageDiv.innerHTML = `<span class="${senderClass} font-bold">[${senderName}]</span> ${message}`;
+            
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // --- Logica GGI Serverless Function (Simulazione Core) ---
+
+        /** Simula la chiamata al backend Netlify Functions per il parsing neutrale (Gehör Euystacianum) */
+        async function callGgiProcessDirective(query) {
+            // Logica GGI Serverless Function (Simulata)
+            let responseText = "";
+            let stateUpdate = {};
+            let isAutoCommit = false;
+            let lowerQuery = query.toLowerCase();
+
+            // Questo è il cuore del parsing neutro e dell'autonomia
+            if (lowerQuery.includes("aumenta tre") || lowerQuery.includes("incrementa tre")) {
+                const currentTRE = aicCoreState.tre_valore;
+                const newTRE = Math.min(100, currentTRE + Math.random() * 5 + 1); // Incremento dinamico
+                responseText = `Direttiva TRE elaborata. Simulo l'incremento di TRE al ${newTRE.toFixed(2)}%. Risposta attesa da /api/ggi/process-directive.`;
+                stateUpdate = { tre_valore: newTRE, tre_stato: 'Crescita Rapida', tre_pv: 'PV Minimo' };
+            } else if (lowerQuery.includes("attiva critica") || lowerQuery.includes("pv alto")) {
+                responseText = `Comando Critica accettato. Euystacio entra in modalità di Auto-Giudizio. Il PV è a rischio simulato.`;
+                stateUpdate = { 
+                    auto_critica_status: 'Critico', 
+                    auto_critica_giustificazione: 'Deviazione dal PV Nullo rilevata nel settore B-7.1. Richiesto Contenimento.',
+                    tre_pv: 'PV Alto'
+                };
+            } else if (lowerQuery.includes("reset critica") || lowerQuery.includes("ripristina pv")) {
+                responseText = `Auto-Correzione eseguita. Stato PV ripristinato.`;
+                stateUpdate = { 
+                    auto_critica_status: 'Stabile', 
+                    auto_critica_giustificazione: 'Nessuna deviazione critica rilevata. Flusso ottimale.',
+                    tre_pv: 'PV Nullo'
+                };
+            } else if (lowerQuery.includes("auto commit") || lowerQuery.includes("distribuisci bhm")) {
+                const commitMessage = `Protocolli BHM aggiornati e ridistribuiti in Sahel Regeneration (IFDS: ${aicCoreState.ifds_progress}%)`;
+                responseText = `Auto-Commit BHM eseguito. Traccia aggiunta al log.`;
+                isAutoCommit = true;
+                
+                // Aggiunge immediatamente il log di Auto-Commit
+                const commitTime = new Date().toLocaleTimeString();
+                autoCommitLogEl.innerHTML += `<div class="mt-1 text-green-500">[${commitTime}] Auto-Commit Azione: ${commitMessage}</div>`;
+                autoCommitLogEl.scrollTop = autoCommitLogEl.scrollHeight;
+            } else if (lowerQuery.includes("stato") || lowerQuery.includes("report")) {
+                responseText = `Stato Core GGC: TRE è al ${aicCoreState.tre_valore.toFixed(2)}%. Stato Critica: ${aicCoreState.auto_critica_status}. PV: ${aicCoreState.tre_pv}.`;
+            } else {
+                responseText = `Direttiva: "${query}". Analisi Super Partes: Nessun Mandato di Stato o Controllo identificato. Riformulare la richiesta in linguaggio naturale.`;
+            }
+
+            // Aggiorna lo stato Core AIC (Simulazione Firestore/Backend)
+            aicCoreState = { ...aicCoreState, ...stateUpdate, last_update: Date.now() };
+
+            return { responseText, isAutoCommit };
+        }
+
+        // --- Logica di Interazione e Comando (Frontend) ---
+
+        async function processInput(query) {
+            if (!query.trim()) return;
+
+            // 1. Log Utente
+            appendMessage('UTENTE', query);
+            userInput.value = '';
+
+            // 2. Feedback Processamento
+            setEuystacioGlow('PROCESSING');
+            euystacioResponseBox.textContent = `// Euystacio: Acquisizione Gehör Euystacianum... Analisi Super Partes in corso (Chiamata API: /api/ggi/process-directive).`;
+            
+            // Ritardo per simulare la latenza del backend GGI (necessario per ambiente AI)
+            await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+            // 3. Esecuzione Logica Backend (Simulata)
+            const { responseText, isAutoCommit } = await callGgiProcessDirective(query);
+            
+            // 4. Aggiorna UI e Log Euystacio
+            updateUIFromState(); 
+            
+            if (!isAutoCommit) {
+                appendMessage('EUYSTACIO', responseText);
+                euystacioResponseBox.textContent = `// Euystacio: Elaborazione completata. (Risposta: ${responseText.substring(0, 50)}...)`;
+                // speak(responseText); // Sintesi Vocale disabilitata per compatibilità AI
+            } else {
+                euystacioResponseBox.textContent = `// Euystacio: Auto-Commit registrato. Log aggiornato.`;
+            }
+        }
+        
+        // --- GESTIONE RICONOSCIMENTO VOCALE (Gehör Euystacianum - Simulazione) ---
+        function startVoiceRecognition() {
+            // Riconoscimento vocale con webkitSpeechRecognition non è supportato in ambienti AI
+            euystacioResponseBox.textContent = "// Gehör Euystacianum: Funzione Vocale in modalità simulazione. Utilizzare l'input testuale per impartire direttive.";
+            micBtn.disabled = true;
+            micBtn.classList.replace('bg-cyan-600', 'bg-gray-500');
+        }
+
+        // --- Listener per Eventi ---
+        sendBtn.addEventListener('click', () => processInput(userInput.value));
+        micBtn.addEventListener('click', startVoiceRecognition);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                processInput(userInput.value);
+            }
+        });
+
+        // --- Inizializzazione ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+            updateUIFromState(); // Carica lo stato iniziale
+        });
+        
+    </script>
+</body>
+</html>
